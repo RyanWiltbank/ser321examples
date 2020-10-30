@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.nio.charset.Charset;
+import org.json.*;
 
 class WebServer {
   public static void main(String args[]) {
@@ -235,8 +236,30 @@ class WebServer {
           query_pairs = splitQuery(request.replace("github?", ""));
           String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
           System.out.println(json);
+          try {
+            JSONArray repoArray = new JSONArray(json);
 
-          builder.append("Check the todos mentioned in the Java source file");
+            builder.append("HTTP/1.1 200 ok\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            for (int i = 0; i < repoArray.length(); i++) {
+              JSONObject repo = repoArray.getJSONObject(i);
+              JSONObject owner = repo.getJSONObject("owner");
+              String userName = owner.getString("login");
+              int ownerID = owner.getInt("id");
+              String repoName = repo.getString("name");
+              builder.append(
+                      (i + 1) + ". " + userName + ", " +
+                      ownerID + " -> " + repoName + "<br />"
+              );
+            }
+          } catch (Exception ex) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("Unable to parse the returned json. Try query=users/amehlhase316/repos");
+          }
+
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response
           // and list the owner name, owner id and name of the public repo on your webpage, e.g.
